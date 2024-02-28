@@ -6,7 +6,6 @@
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 //Servo for open and close trash cap
 Servo myservo;
-//Comunicate with ESP8266 though Serial method port 9600
 //Ultra Sonic for check trash capacity
 const unsigned int CAP_TRIG_PIN = 8;
 const unsigned int CAP_ECHO_PIN = 7;
@@ -79,8 +78,6 @@ void openclose() {
 
 long percentTrashFill() {
   long distance = getDistanceFromUltraSonicSensor(1);
-  Serial.println(distance);
-  Serial.println("curretntTrashFill: " + (String)currentTrashFill);
   // currentTrashFill = (25 - distance) * 2;
   currentTrashFill = map(distance, 25, 5, 0, 100);
   if (currentTrashFill < 0) currentTrashFill = 0;

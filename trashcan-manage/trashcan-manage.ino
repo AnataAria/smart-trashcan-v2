@@ -1,17 +1,17 @@
 #include <ESP8266WiFi.h>
 #include <ArduinoJson.h>
 #include <LoRa.h>
-#include <Wire.h>
 #include <SPI.h>
+#include <Wire.h>
 #include <ESP8266WebServer.h>
 
-#define ss 15
-#define rst 16
-#define dio0 2
+#define ss 15 //ss port = D08
+#define rst 16 //reset port = D00 In ESP
+#define dio0 4 //call back port only use if use callback
 ESP8266WebServer server(8080);
 const char* ssid = "Arisa";
 const char* password = "09062003";
-String dataString = "";
+String dataString = "0,CLOSE";
 void handle_OnConnect();
 void onReceiveDataFromArduinoController(int packetSize);
 void setup() {
@@ -30,7 +30,6 @@ void setup() {
   Serial.println("LoRa Receiver");
 
   while (!Serial);
-  Serial.println("LoRa Sender");
   LoRa.setPins(ss, rst, dio0);
     if (!LoRa.begin(433E6)) {
     Serial.println("Starting LoRa failed!");
@@ -130,9 +129,18 @@ void handle_OnConnect() {
 }
 
 void onReceiveDataFromArduinoController(int packetSize){
-  for (int i = 0; i < packetSize; i++) {
-    char c = LoRa.read();
-    dataString += c;
-    Serial.print(c);
+  Serial.print(packetSize);
+  if (packetSize) {
+    dataString = "";
+    Serial.print("Received packet: ");
+
+    // Read packet and store in the global string variable
+    while (LoRa.available()) {
+      char c = LoRa.read();
+      dataString += c;
+    }
+
+    // Print the received message
+    Serial.println(dataString);
   }
 }
