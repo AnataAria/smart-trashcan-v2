@@ -1,7 +1,7 @@
 #include <LiquidCrystal_I2C.h>
 #include <Servo.h>
 #include <SPI.h>
-#include <LoRa.h> 
+#include <LoRa.h>
 //LCD for show status and trash fill
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 //Servo for open and close trash cap
@@ -16,7 +16,7 @@ const unsigned int CHECK_ECHO_PIN = 3;
 const unsigned int SERVO_PIN = 5;
 const unsigned int MIN_DISTANCE = 80;
 
-const unsigned int DELAYS = 100;
+const unsigned int DELAYS = 300;
 const unsigned int BAUD_RATE = 9600;
 int pos = 180;
 const int numReadings = 10;
@@ -32,7 +32,8 @@ long checkAverage = 0;            // the average
 long distance = 0;
 long currentTrashFill = 0;
 
-void onReceiveDataFromESPController(int packetSize);
+void onReceiveDataFromESPControllerV2();
+String dataString = "2024-3-9,16:06:01";
 
 void setup() {
   Serial.begin(BAUD_RATE);
@@ -48,33 +49,34 @@ void setup() {
     capReadings[thisReading] = 0;
     checkReadings[thisReading] = 0;
   }
-  while (!Serial);  
+  while (!Serial)
+    ;
   Serial.println("LoRa Sender");
-  if (!LoRa.begin(433E6)) { // or 915E6, the MHz speed of yout module
+  if (!LoRa.begin(433E6)) {  // or 915E6, the MHz speed of yout module
     Serial.println("Starting LoRa failed!");
-    while (1);
+    while (1)
+      ;
   }
-  LoRa.onReceive(onReceiveDataFromESPController);
-  LoRa.receive();
   // Timer1.initialize(500000);
   // Timer1.attachInterrupt(sendDataOnline);
 }
 
 void loop() {
-  openclose();
-  percentTrashFill();
+  openclose();  
   sendDataLoRa();
+  delay(100);
+  onReceiveDataFromESPControllerV2();
   screenView();
 }
 
 void openclose() {
   long distance = getDistanceFromUltraSonicSensor(2);
-  if (distance < 100) {
+  if (distance < 20) {
     myservo.write(90);
     pos = 90;
     trashCapStatus = "OPEN";
   }
-  if (distance > 100) {
+  if (distance > 20) {
     myservo.write(180);
     pos = 0;
     trashCapStatus = "CLOSE";
@@ -91,12 +93,16 @@ long percentTrashFill() {
 }
 
 void screenView() {
+  int commaIndex = dataString.indexOf(',');
+  Serial.print(commaIndex);
+  String date = dataString.substring(0, commaIndex);
+  String time = dataString.substring(commaIndex + 1);
   lcd.clear();
   lcd.setCursor(1, 0);
-  lcd.print("STATUS: " + trashCapStatus);
+  lcd.print(date + " " + currentTrashFill);
   lcd.setCursor(1, 1);
-  lcd.print(currentTrashFill);
-  lcd.print("%");
+  lcd.print(time);
+  // lcd.print(" " + currentTrashFill + " %");
   delay(100);
 }
 
@@ -132,23 +138,20 @@ void sendDataLoRa() {
   LoRa.endPacket();
 
   Serial.println("Data sent via LoRa: " + send);
+  LoRa.receive();
   delay(DELAYS);
 }
 
-void onReceiveDataFromESPController(int packetSize){
-  Serial.print(packetSize);
+void onReceiveDataFromESPControllerV2() {
+  int packetSize = LoRa.parsePacket();
   if (packetSize) {
     dataString = "";
     Serial.print("Received packet: ");
-
-    // Read packet and store in the global string variable
     while (LoRa.available()) {
       char c = LoRa.read();
       dataString += c;
     }
-
-    // Print the received message
     Serial.println(dataString);
+    LoRa.packetRssi();
   }
 }
-

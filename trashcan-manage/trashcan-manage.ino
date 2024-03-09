@@ -11,8 +11,8 @@
 #define rst 16 //reset port = D00 In ESP
 #define dio0 4 //call back port only use if use callback
 ESP8266WebServer server(8080);
-const char* ssid = "Arisa";
-const char* password = "09062003";
+const char* ssid = "AKA Coffee _PL";
+const char* password = "123456789";
 String dataString = "0,CLOSE";
 String timeResult = ",";
 WiFiUDP ntpUDP;
@@ -44,7 +44,7 @@ void setup() {
     while (1);
   }
   timeClient.begin();
-  timeClient.setTimeOffset(0);
+  timeClient.setTimeOffset(25200);
   Serial.println("LoRa initialization successful.");
 
   LoRa.onReceive(onReceiveDataFromArduinoController);
@@ -52,8 +52,8 @@ void setup() {
 }
 
 void loop() {
-  void handleSendingDateToArduino();
   delay(2000);
+  handleSendingDateToArduino();
   server.handleClient();
   delay(100);
 }
@@ -156,7 +156,7 @@ void onReceiveDataFromArduinoController(int packetSize){
 }
 
 void handleSendingDateToArduino(){
-  void syncTimeFromTimeServer();
+  syncTimeFromTimeServer();
   String send = timeResult;
 
   LoRa.beginPacket();
@@ -164,11 +164,13 @@ void handleSendingDateToArduino(){
   LoRa.endPacket();
 
   Serial.println("Data sent via LoRa: " + send);
-  delay(DELAYS);
+  LoRa.receive();
+  delay(1000);
 }
 
 void syncTimeFromTimeServer(){
   timeClient.update();
+  time_t epochTime = timeClient.getEpochTime();
   String formattedTime = timeClient.getFormattedTime();
   Serial.print("Formatted Time: ");
   Serial.println(formattedTime);  
@@ -182,10 +184,6 @@ void syncTimeFromTimeServer(){
   int currentMonth = ptm->tm_mon+1;
   Serial.print("Month: ");
   Serial.println(currentMonth);
-
-  String currentMonthName = months[currentMonth-1];
-  Serial.print("Month name: ");
-  Serial.println(currentMonthName);
 
   int currentYear = ptm->tm_year+1900;
   Serial.print("Year: ");
