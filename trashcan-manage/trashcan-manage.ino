@@ -4,6 +4,8 @@
 #include <SPI.h>
 #include <Wire.h>
 #include <ESP8266WebServer.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
 
 #define ss 15 //ss port = D08
 #define rst 16 //reset port = D00 In ESP
@@ -12,8 +14,13 @@ ESP8266WebServer server(8080);
 const char* ssid = "Arisa";
 const char* password = "09062003";
 String dataString = "0,CLOSE";
+String timeResult = ",";
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org");
 void handle_OnConnect();
 void onReceiveDataFromArduinoController(int packetSize);
+void handleSendingDateToArduino();
+void syncTimeFromTimeServer();
 void setup() {
   Serial.begin(9600);
   WiFi.begin(ssid, password);
@@ -36,7 +43,8 @@ void setup() {
     delay(100);
     while (1);
   }
-
+  timeClient.begin();
+  timeClient.setTimeOffset(0);
   Serial.println("LoRa initialization successful.");
 
   LoRa.onReceive(onReceiveDataFromArduinoController);
@@ -44,6 +52,8 @@ void setup() {
 }
 
 void loop() {
+  void handleSendingDateToArduino();
+  delay(2000);
   server.handleClient();
   delay(100);
 }
@@ -143,4 +153,48 @@ void onReceiveDataFromArduinoController(int packetSize){
     // Print the received message
     Serial.println(dataString);
   }
+}
+
+void handleSendingDateToArduino(){
+  void syncTimeFromTimeServer();
+  String send = timeResult;
+
+  LoRa.beginPacket();
+  LoRa.print(send);
+  LoRa.endPacket();
+
+  Serial.println("Data sent via LoRa: " + send);
+  delay(DELAYS);
+}
+
+void syncTimeFromTimeServer(){
+  timeClient.update();
+  String formattedTime = timeClient.getFormattedTime();
+  Serial.print("Formatted Time: ");
+  Serial.println(formattedTime);  
+  //Get a time structure
+  struct tm *ptm = gmtime ((time_t *)&epochTime); 
+
+  int monthDay = ptm->tm_mday;
+  Serial.print("Month day: ");
+  Serial.println(monthDay);
+
+  int currentMonth = ptm->tm_mon+1;
+  Serial.print("Month: ");
+  Serial.println(currentMonth);
+
+  String currentMonthName = months[currentMonth-1];
+  Serial.print("Month name: ");
+  Serial.println(currentMonthName);
+
+  int currentYear = ptm->tm_year+1900;
+  Serial.print("Year: ");
+  Serial.println(currentYear);
+
+  //Print complete date:
+  String currentDate = String(currentYear) + "-" + String(currentMonth) + "-" + String(monthDay);
+  Serial.print("Current date: ");
+  Serial.println(currentDate);
+
+  timeResult = currentDate + "," + formattedTime;
 }

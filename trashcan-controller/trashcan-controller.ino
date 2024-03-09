@@ -31,6 +31,9 @@ long checkTotal = 0;              // the running total
 long checkAverage = 0;            // the average
 long distance = 0;
 long currentTrashFill = 0;
+
+void onReceiveDataFromESPController(int packetSize);
+
 void setup() {
   Serial.begin(BAUD_RATE);
   myservo.attach(SERVO_PIN);
@@ -51,6 +54,8 @@ void setup() {
     Serial.println("Starting LoRa failed!");
     while (1);
   }
+  LoRa.onReceive(onReceiveDataFromESPController);
+  LoRa.receive();
   // Timer1.initialize(500000);
   // Timer1.attachInterrupt(sendDataOnline);
 }
@@ -128,5 +133,22 @@ void sendDataLoRa() {
 
   Serial.println("Data sent via LoRa: " + send);
   delay(DELAYS);
+}
+
+void onReceiveDataFromESPController(int packetSize){
+  Serial.print(packetSize);
+  if (packetSize) {
+    dataString = "";
+    Serial.print("Received packet: ");
+
+    // Read packet and store in the global string variable
+    while (LoRa.available()) {
+      char c = LoRa.read();
+      dataString += c;
+    }
+
+    // Print the received message
+    Serial.println(dataString);
+  }
 }
 
